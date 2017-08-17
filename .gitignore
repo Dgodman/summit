@@ -1,0 +1,5 @@
+.idea/
+.splitta/
+splitta/*
+.__pycache__/
+*.pyc
