@@ -1,91 +1,64 @@
-try:
-    import re2 as re
-except ImportError:
-    import re
-
-"""
-A list of (regexp, repl) pairs applied in sequence.
-The resulting string is split on whitespace.
-(Adapted from the Punkt Word Tokenizer)
-"""
-
-test_str = "On Jan. 20, former Sen. Barack Obama became the 44th President of the U.S. Millions attended the Inauguration."
-
-_tokenize_regexps = [
-
-    # uniform quotes
-    (re.compile(r'\'\''), r'"'),
-    (re.compile(r'\`\`'), r'"'),
-
-    # Separate punctuation (except period) from words:
-    (re.compile(r'(^|\s)(\')'), r'\1\2 '),
-    (re.compile(r'(?=[\(\"\`{\[:;&\#\*@])(.)'), r'\1 '),
-
-    (re.compile(r'(.)(?=[?!)\";}\]\*:@\'])'), r'\1 '),
-    (re.compile(r'(?=[\)}\]])(.)'), r'\1 '),
-    (re.compile(r'(.)(?=[({\[])'), r'\1 '),
-    (re.compile(r'((^|\s)\-)(?=[^\-])'), r'\1 '),
-
-    # split single hyphens if not between words
-    (re.compile(r'([\W\d])(-)([\W\d])'), r'\1 \2 \3'),
-
-    # Treat double-hyphen as one token:
-    (re.compile(r'([^-])(\-\-+)([^-])'), r'\1 \2 \3'),
-    (re.compile(r'(\s|^)(,)(?=(\S))'), r'\1\2 '),
-
-    # Only separate comma if space follows:
-    (re.compile(r'(.)(,)(\s|$)'), r'\1 \2\3'),
-
-    # Combine dots separated by whitespace to be a single token:
-    (re.compile(r'\.\s\.\s\.'), r'...'),
-
-    # Separate "No.6"
-    (re.compile(r'([A-Za-z]\.)(\d+)'), r'\1 \2'),
-
-    # Separate words from ellipses
-    (re.compile(r'([^\.]|^)(\.{2,})(.?)'), r'\1 \2 \3'),
-    (re.compile(r'(^|\s)(\.{2,})([^\.\s])'), r'\1\2 \3'),
-    (re.compile(r'([^\.\s])(\.{2,})($|\s)'), r'\1 \2\3'),
-
-    ## adding a few things here:
-
-    # fix %, $, &
-    (re.compile(r'(\d)%'), r'\1% '),
-    (re.compile(r'\$(\.?\d)'), r'$ \1'),
-    (re.compile(r'(\w)& (\w)'), r'\1&\2'),
-    (re.compile(r'(\w\w+)&(\w\w+)'), r'\1 & \2'),
-
-    # fix (n 't) --> ( n't)
-    (re.compile(r'n \'t( |$)'), r" n't\1"),
-    (re.compile(r'N \'T( |$)'), r" N'T\1"),
-
-    # treebank tokenizer special words
-    (re.compile(r'([Cc])annot'), r'\1an not'),
-
-    (re.compile(r'\s+'), r' '),
-
-]
+from nltk.tokenize import sent_tokenize, word_tokenize
+from nltk.corpus import stopwords
+from nltk.stem import PorterStemmer
+from nltk.stem.snowball import SnowballStemmer
+from nltk.stem import WordNetLemmatizer
+from string import punctuation
+from collections import Counter
 
 
-def tokenize(s):
-    """
-    Tokenize a string using the rule above
-    """
-    for (regexp, repl) in _tokenize_regexps:
-        s = regexp.sub(repl, s)
-    return s
+EXAMPLE_TITLE = "Barcelona searches for van driver who killed more than dozen along iconic promenade"
+EXAMPLE_FILE = 'sample.txt'
+EXTRA_STOP_WORDS = {'—', '’', '“', '”', }
 
 
-def test_file(filename=""):
+# read text from a file
+def read_file(filename=""):
     if not filename:
-        filename = "sample.txt"
-    with open(filename) as f:
+        filename = EXAMPLE_FILE
+    with open(filename, encoding="utf8") as f:
         text = f.read()
     if text:
         text = text.strip()
-        text = tokenize(text)
     return text
 
-# LOOK INTO nltk package
-# pip install nltk
-# example @ https://pythonprogramming.net/tokenizing-words-sentences-nltk-tutorial/
+
+# tokenize words and remove punctuation
+def tokenize(text):
+    tokens = word_tokenize(text)
+    tokens = [i for i in tokens if i not in punctuation]
+    return tokens
+
+
+EXAMPLE_TEXT = read_file()
+if EXAMPLE_TEXT:
+    # tokenize text
+    word_tokens = tokenize(EXAMPLE_TEXT)
+    # filter stopwords
+    stop_words = set(stopwords.words('english'))
+    stop_words.update(EXTRA_STOP_WORDS)
+    filtered_words = []
+    for w in word_tokens:
+        if w not in stop_words:
+            filtered_words.append(w.lower())
+    # print filtered list
+    print(filtered_words)
+    word_frequency = Counter(filtered_words)
+    print(word_frequency)
+    # stem word list
+    stemmed_words = []
+    stemmer = PorterStemmer()
+    #stemmer = SnowballStemmer("english")
+    #lemmer = WordNetLemmatizer()
+    #lemmed_words = []
+
+    for w in filtered_words:
+        #.append(lemmer.lemmatize(w))
+        stemmed_words.append(stemmer.stem(w))
+    # get frequency
+    word_frequency = Counter(stemmed_words)
+    print(stemmed_words)
+    print(word_frequency)
+    #word_frequency = Counter(lemmed_words)
+    #print(lemmed_words)
+    #print(word_frequency)
