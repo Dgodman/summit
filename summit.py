@@ -32,16 +32,23 @@ def tokenize(text):
 
 EXAMPLE_TEXT = read_file()
 if EXAMPLE_TEXT:
+    print(len(EXAMPLE_TEXT))
     # tokenize text
+    print("WORD TOKENS")
     word_tokens = tokenize(EXAMPLE_TEXT)
+    print(word_tokens)
+    word_frequency = Counter(word_tokens)
+    print(word_frequency)
     # filter stopwords
     stop_words = set(stopwords.words('english'))
     stop_words.update(EXTRA_STOP_WORDS)
     filtered_words = []
     for w in word_tokens:
+        w = w.lower()
         if w not in stop_words:
-            filtered_words.append(w.lower())
+            filtered_words.append(w)
     # print filtered list
+    print("FILTERED WORD TOKENS")
     print(filtered_words)
     word_frequency = Counter(filtered_words)
     print(word_frequency)
@@ -57,6 +64,7 @@ if EXAMPLE_TEXT:
         stemmed_words.append(stemmer.stem(w))
     # get frequency
     word_frequency = Counter(stemmed_words)
+    print("FILTERED & STEMMED WORD TOKENS")
     print(stemmed_words)
     print(word_frequency)
     #word_frequency = Counter(lemmed_words)
