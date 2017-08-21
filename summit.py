@@ -83,11 +83,21 @@ if not PYTHON_SHELL and EXAMPLE_TEXT:
     #print(word_frequency)
 
 
-class Concepts:
+class Summarize:
     """
     Represents concepts built from common key words from text
     """
     def __init__(self, text):
+        self.text = None
+        self.stop_words = None
+        self.words_filtered = None
+        self.paragraphs = None
+        self.sentences = None
+        self.words = None
+        self.word_ranks = None
+        self.generate(text)
+
+    def generate(self, text):
         # content
         self.text = text
         # stop words
@@ -106,6 +116,14 @@ class Concepts:
             word = word.lower()
             if word not in self.stop_words:
                 self.words_filtered.append(word)
+
+    def rank_words(self):
+        if not self.word_ranks:
+            # word frequency
+            wf = Counter(self.words_filtered)
+            # sorted list
+            self.word_ranks = wf.most_common()
+        return self.word_ranks
 
     def split_paragraphs(self):
         tokens = []
