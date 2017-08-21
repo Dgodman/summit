@@ -22,6 +22,7 @@ def read_file(filename=""):
         filename = EXAMPLE_FILE
     with open(filename, encoding="utf8") as f:
         text = f.read()
+        text = text.replace(u'\ufeff', '')
     if text:
         text = text.strip()
     return text
@@ -87,30 +88,40 @@ class Concepts:
     Represents concepts built from common key words from text
     """
     def __init__(self, text):
+        # content
         self.text = text
+        # stop words
         self.stop_words = STOP_WORDS
+        self.stop_words.update(EXTRA_STOP_WORDS)
         self.words_filtered = []
-        self.paragraphs = []
+        # paragraphs
         print("Parsing paragraphs...")
-        # unify paragraphs
-        temp_text = re.sub(r'\n\n', '\n', text)
-        self.paragraphs = temp_text.split('\n')
+        self.paragraphs = self.split_paragraphs()
+        # sentences
         print("Parsing sentences...")
-        self.sentences = self.get_sent_tokens()
+        self.sentences = self.split_sentences()
         print("Parsing words...")
-        self.words = self.get_word_tokens()
+        self.words = self.split_words()
         for word in self.words:
             word = word.lower()
             if word not in self.stop_words:
                 self.words_filtered.append(word)
 
-    def get_sent_tokens(self):
+    def split_paragraphs(self):
+        tokens = []
+        if self.text:
+            # replace with single newlines
+            temp_text = re.sub(r'\n+', '\n', self.text).strip()
+            tokens = temp_text.split('\n')
+        return tokens
+
+    def split_sentences(self):
         tokens = []
         if self.text:
             tokens = sent_tokenize(self.text)
         return tokens
 
-    def get_word_tokens(self):
+    def split_words(self):
         tokens = []
         if self.text:
             tokens = word_tokenize(self.text)
