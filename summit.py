@@ -28,17 +28,40 @@ def read_file(filename=""):
     return text
 
 
-# tokenize words and remove punctuation
-def word_tokens(text):
-    tokens = word_tokenize(text)
-    tokens = [i for i in tokens if i not in punctuation]
+# tokenize by paragraphs
+def split_paragraphs(text):
+    tokens = []
+    if text:
+        # replace with single newlines
+        temp_text = re.sub(r'\n+', '\n', text).strip()
+        tokens = temp_text.split('\n')
     return tokens
 
 
-# tokenize sentences
-def sent_tokens(text):
-    tokens = sent_tokenize(text)
+# tokenize by sentences
+def split_sentences(text):
+    tokens = []
+    if text:
+        temp_text = re.sub(r'\n+', ' ', text).strip()
+        tokens = sent_tokenize(temp_text)
     return tokens
+
+
+# tokenize by words
+def split_words(text):
+    tokens = []
+    if text:
+        tokens = word_tokenize(text)
+        tokens = [i for i in tokens if i not in punctuation]
+    return tokens
+
+
+def max_intersects(intersect):
+    indices = []
+    if len(intersect) > 0:
+        indices = list(range(len(intersect)))
+        indices.sort(reverse=True, key=lambda x: intersect[x])
+    return indices
 
 
 EXAMPLE_TEXT = read_file()
@@ -46,7 +69,7 @@ if not PYTHON_SHELL and EXAMPLE_TEXT:
     print(len(EXAMPLE_TEXT))
     # tokenize text
     print("WORD TOKENS")
-    word_tokens = word_tokens(EXAMPLE_TEXT)
+    word_tokens = split_words(EXAMPLE_TEXT)
     print(word_tokens)
     word_frequency = Counter(word_tokens)
     print(word_frequency)
@@ -90,11 +113,10 @@ class Summarize:
     def __init__(self, text):
         self.text = None
         self.stop_words = None
-        self.words_filtered = None
+        self.words_cleaned = None
         self.paragraphs = None
         self.sentences = None
         self.words = None
-        self.word_ranks = None
         self.generate(text)
 
     def generate(self, text):
@@ -103,71 +125,62 @@ class Summarize:
         # stop words
         self.stop_words = STOP_WORDS
         self.stop_words.update(EXTRA_STOP_WORDS)
-        self.words_filtered = []
+        self.words_cleaned = []
         # paragraphs
         print("Parsing paragraphs...")
-        self.paragraphs = self.split_paragraphs()
+        self.paragraphs = split_paragraphs(self.text)
         # sentences
         print("Parsing sentences...")
-        self.sentences = self.split_sentences()
+        self.sentences = split_sentences(self.text)
         print("Parsing words...")
-        self.words = self.split_words()
-        for word in self.words:
+        self.words = split_words(self.text)
+        print("Done.")
+
+    def get_sentence_intersects(self, clean=False):
+        intersects = []
+        n = len(self.sentences)
+        if n > 0:
+            # zeroed 2d array
+            intersects = [[0] * n for _ in range(n)]
+            for i in range(0, n):
+                s1 = split_words(self.sentences[i])
+                if clean:
+                    s1 = self.clean(s1)
+                s1 = set(s1)
+                for j in range(0, n):
+                    s2 = split_words(self.sentences[j])
+                    if clean:
+                        s2 = self.clean(s2)
+                    s2 = set(s2)
+                    intersects[i][j] = len(s1.intersection(s2)) / ((len(s1) + len(s2)) / 2)
+        return intersects
+
+    def clean(self, text):
+        cleaned = []
+        words = self.split_words(text)
+        for word in words:
             word = word.lower()
             if word not in self.stop_words:
-                self.words_filtered.append(word)
+                cleaned.append(word)
+        return cleaned
 
-    def rank_words(self):
-        if not self.word_ranks:
+    def word_frequency(self, text):
+        word_freq = []
+        clean_text = self.clean(text)
+        if clean_text:
             # word frequency
-            wf = Counter(self.words_filtered)
+            wf = Counter(clean_text)
             # sorted list
-            self.word_ranks = wf.most_common()
-        return self.word_ranks
-
-    def split_paragraphs(self):
-        tokens = []
-        if self.text:
-            # replace with single newlines
-            temp_text = re.sub(r'\n+', '\n', self.text).strip()
-            tokens = temp_text.split('\n')
-        return tokens
-
-    def split_sentences(self):
-        tokens = []
-        if self.text:
-            tokens = sent_tokenize(self.text)
-        return tokens
-
-    def split_words(self):
-        tokens = []
-        if self.text:
-            tokens = word_tokenize(self.text)
-            tokens = [i for i in tokens if i not in punctuation]
-        return tokens
+            word_freq = wf.most_common()
+        return word_freq
 
 
 class Sentence:
     """
     Represents a sentence object
     """
-    def __init__(self, text, filter_words=True):
+    def __init__(self, text):
         # set sentence text
         self.text = text
         # split words
-        self.words = []
-        if self.text:
-            self.words = word_tokenize(self.text)
-            # filter words
-            if filter_words:
-                words_filtered = []
-                for word in self.words:
-                    word = word.lower()
-                    if word not in STOP_WORDS:
-                        words_filtered.append(word)
-                self.words = filtered_words
-            # set word count
-            self.word_count = len(self.words)
-
-    def get_words(self):
-        return self.words
+        self.words = split_words(self.text)
