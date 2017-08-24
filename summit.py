@@ -294,6 +294,16 @@ class Summarize:
                 cleaned.append(word)
         return cleaned
 
+    def key_words(self, text, num=-1):
+        key_words = []
+        wf = self.word_frequency(text)
+        if wf:
+            if not num or num <= 0:
+                key_words = wf
+            else:
+                key_words = wf[:num]
+        return key_words
+
     # return words and their frequency
     def word_frequency(self, text):
         word_freq = []
