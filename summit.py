@@ -12,11 +12,11 @@ RUN_TEST = False
 EOS_CHARS = '.?!'
 EXAMPLE_TITLE = "Barcelona searches for van driver who killed more than dozen along iconic promenade"
 EXAMPLE_FILE = 'sample.txt'
-STOP_WORDS = set(stopwords.words('english'))
+STOPWORDS = set(stopwords.words('english'))
 STOPWORDS_CUSTOM = \
-    {"—", "’", "“", "”", "\"", "a", "about", "above", "after", "again", "against", "all", "am", "an", "and",
-     "any", "are", "aren't", "as", "at", "be", "because", "been", "before", "being", "below", "between", "both",
-     "but", "by", "can't", "cannot", "could", "couldn't", "did", "didn't", "do", "does", "doesn't", "doing", "don't",
+    {"a", "about", "above", "after", "again", "against", "all", "am", "an", "and", "any", "are", "aren't", "as",
+     "at", "be", "because", "been", "before", "being", "below", "between", "both", "but", "by", "can't", "cannot",
+     "could", "couldn't", "did", "didn't", "do", "does", "doesn't", "doing", "don't",
      "down", "during", "each", "few", "for", "from", "further", "had", "hadn't", 'has', "hasn't", "have", "haven't",
      "having", "he", "he'd", "he'll", "he's", "her", "here", "here's", "hers", "herself", "him", "himself", "his",
      "how", "how's", "i", "i'd", "i'll", "i'm", "i've", "if", "in", "into", "is", "isn't", "it", "it's", "its",
@@ -27,7 +27,8 @@ STOPWORDS_CUSTOM = \
      "they're", "they've", "this", "those", "through", "to", "too", "under", "until", "up", "very", "was", "wasn't",
      "we", "we'd", "we'll", "we're", "we've", "were", "weren't", "what", "what's", "when", "when's", "where",
      "where's", "which", "while", "who", "who's", "whom", "why", "why's", "with", "won't", "would", "wouldn't", "you",
-     "you'd", "you'll", "you're", "you've", "your", "yours", "yourself", "yourselves"}
+     "you'd", "you'll", "you're", "you've", "your", "yours", "yourself", "yourselves", "—", "’", "“", "”", "\"", "''",
+     '``', }
 
 STOPWORDS_CUSTOM_BIG = \
     {"a", "about", "above", "across", "after", "again", "against", "all", "almost", "alone", "along",
@@ -63,7 +64,7 @@ STOPWORDS_CUSTOM_BIG = \
      "uses", "v", "very", "w", "want", "wanted", "wanting", "wants", "was", "way", "ways", "we", "well", "wells",
      "went", "were", "what", "when", "where", "whether", "which", "while", "who", "whole", "whose", "why", "will",
      "with", "within", "without", "work", "worked", "working", "works", "would", "x", "y", "year", "years", "yet",
-     "you", "young", "younger", "youngest", "your", "yours", "z"}
+     "you", "young", "younger", "youngest", "your", "yours", "z", "—", "’", "“", "”", "\"", "''", '``', }
 
 
 clean_regexps = [
@@ -173,21 +174,21 @@ if RUN_TEST and EXAMPLE_TEXT:
     # stem word list
     stemmed_words = []
     stemmer = PorterStemmer()
-    #stemmer = SnowballStemmer("english")
-    #lemmer = WordNetLemmatizer()
-    #lemmed_words = []
+    # stemmer = SnowballStemmer("english")
+    # lemmer = WordNetLemmatizer()
+    # lemmed_words = []
 
     for w in filtered_words:
-        #.append(lemmer.lemmatize(w))
+        # .append(lemmer.lemmatize(w))
         stemmed_words.append(stemmer.stem(w))
     # get frequency
     word_frequency = Counter(stemmed_words)
     print("FILTERED & STEMMED WORD TOKENS")
     print(stemmed_words)
     print(word_frequency)
-    #word_frequency = Counter(lemmed_words)
-    #print(lemmed_words)
-    #print(word_frequency)
+    # word_frequency = Counter(lemmed_words)
+    # print(lemmed_words)
+    # print(word_frequency)
 
 
 class Summarize:
@@ -201,13 +202,15 @@ class Summarize:
         self.paragraphs = None
         self.sentences = None
         self.words = None
+        self.stemmer = None
+        self.lemmatizer = None
         self.generate(text)
 
     def generate(self, text):
         # content
         self.text = clean_text(text)
         # stop words
-        self.stop_words = STOP_WORDS
+        self.stop_words = STOPWORDS_CUSTOM_BIG
         self.words_cleaned = []
         # paragraphs
         print("Parsing paragraphs...")
@@ -219,6 +222,41 @@ class Summarize:
         self.words = split_words(self.text)
         print("Done.")
 
+    # set stemmer type
+    def set_stemmer(self, stem_type):
+        if not stem_type:
+            self.stemmer = None
+        else:
+            stem_type = stem_type.lower()
+        if stem_type == "porter":
+            self.stemmer = PorterStemmer()
+        elif stem_type == "snowball":
+            self.stemmer = SnowballStemmer("english")
+
+    def set_lemmatizer(self, lem_type="default"):
+        self.stemmer = None
+        if not lem_type:
+            self.lemmatizer = None
+        else:
+            self.lemmatizer = WordNetLemmatizer()
+
+    # do stemming
+    def stem_words(self, text):
+        stemmed = []
+        if self.stemmer:
+            for word in self.clean_words(text):
+                stemmed.append(self.stemmer.stem(word))
+        return stemmed
+
+    # do lemming
+    def lem_words(self, text):
+        lemmed = []
+        if self.lemmatizer:
+            for word in self.clean_words(text):
+                lemmed.append(self.lemmatizer.lemmatize(word))
+        return lemmed
+
+    # 2d array that compares likenesses of sentences
     def sent_intersections(self, clean=False):
         intersects = []
         n = len(self.sentences)
@@ -226,31 +264,41 @@ class Summarize:
             # zeroed 2d array
             intersects = [[0] * n for _ in range(n)]
             for i in range(0, n):
-                s1 = split_words(self.sentences[i])
+                s1 = self.sentences[i]
                 if clean:
-                    s1 = self.clean(s1)
+                    s1 = self.clean_words(s1)
+                else:
+                    s1 = split_words(s1)
                 s1 = set(s1)
                 for j in range(0, n):
-                    s2 = split_words(self.sentences[j])
+                    s2 = self.sentences[j]
                     if clean:
-                        s2 = self.clean(s2)
+                        s2 = self.clean_words(s2)
+                    else:
+                        s2 = split_words(s2)
                     s2 = set(s2)
                     intersects[i][j] = len(s1.intersection(s2)) / ((len(s1) + len(s2)) / 2)
         return intersects
 
-    def clean(self, text):
+    # remove stop words
+    def clean_words(self, text):
         cleaned = []
-        words = self.split_words(text)
+        words = split_words(text)
         for word in words:
             word = word.lower()
             if word not in self.stop_words:
+                if self.stemmer:
+                    word = self.stemmer.stem(word)
+                elif self.lemmatizer:
+                    word = self.lemmatizer.lemmatize(word)
                 cleaned.append(word)
         return cleaned
 
+    # return words and their frequency
     def word_frequency(self, text):
         word_freq = []
-        text_cleaned = self.clean(text)
-        if clean_text:
+        text_cleaned = self.clean_words(text)
+        if text_cleaned:
             # word frequency
             wf = Counter(text_cleaned)
             # sorted list
