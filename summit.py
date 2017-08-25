@@ -176,11 +176,12 @@ def split_words(text):
     return tokens
 
 
-def max_intersects(intersect):
+# sort a list and return its sorted indexes
+def sort_by_index(list_to_sort):
     indices = []
-    if len(intersect) > 0:
-        indices = list(range(len(intersect)))
-        indices.sort(reverse=True, key=lambda x: intersect[x])
+    if len(list_to_sort) > 0:
+        indices = list(range(len(list_to_sort)))
+        indices.sort(reverse=True, key=lambda x: list_to_sort[x])
     return indices
 
 
@@ -272,8 +273,37 @@ class Ranker(AbstractTokenizer):
     def __init__(self, _text, _stop_words=STOPWORDS_CUSTOM_BIG):
         super(Ranker, self).__init__(_text, _stop_words)
 
+    def top_sentences(self, _count=-1):
+        # 25% if no count given
+        if not _count or _count <= 0:
+            _count = int(len(self.sentences) * 0.25)
+        # 100% if count >
+        if _count > len(self.sentences):
+            _count = len(self.sentences)
+        # score all sentences
+        sent_scores = self.rank_sentences()
+        # sort by index
+        sorted_indexes = sort_by_index(sent_scores)[:_count]
+        # return sentences
+        return sorted_indexes
+
     def rank_sentences(self):
-        pass
+        scores = []
+        # score all sentences
+        for sent in self.sentences:
+            scores.append(self.score_sentence(sent))
+        return scores
+
+    def score_sentence(self, _sentence):
+        # stem sentence
+        sent = stem_text(_sentence)
+        # get word ranks
+        word_scores = self.word_count(_stemmed=True, _normalize=True)
+        # sum words in sentence
+        score = 0
+        for word in sent:
+            score += word_scores.get(word, 0)
+        return score
 
 
 class Summarize:
