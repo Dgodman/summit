@@ -9,10 +9,13 @@ import re
 
 
 RUN_TEST = False
+LEM_WORDS = False
+STEMMER = PorterStemmer()
+LEMMER = WordNetLemmatizer()
 EOS_CHARS = '.?!'
 EXAMPLE_TITLE = "Barcelona searches for van driver who killed more than dozen along iconic promenade"
 EXAMPLE_FILE = 'sample.txt'
-STOPWORDS = set(stopwords.words('english'))
+STOPWORDS_SMALL = set(stopwords.words('english'))
 STOPWORDS_CUSTOM = \
     {"a", "about", "above", "after", "again", "against", "all", "am", "an", "and", "any", "are", "aren't", "as",
      "at", "be", "because", "been", "before", "being", "below", "between", "both", "but", "by", "can't", "cannot",
@@ -66,6 +69,7 @@ STOPWORDS_CUSTOM_BIG = \
      "with", "within", "without", "work", "worked", "working", "works", "would", "x", "y", "year", "years", "yet",
      "you", "young", "younger", "youngest", "your", "yours", "z", "—", "’", "“", "”", "\"", "''", '``', }
 
+STOPWORDS = STOPWORDS_CUSTOM_BIG
 
 clean_regexps = [
     # uniform quotes
@@ -79,11 +83,41 @@ clean_regexps = [
 
 
 # clean up text with regexpr
-def clean_text(text):
+def prep_doc(text):
     if text:
         for (regexp, repl) in clean_regexps:
             text = regexp.sub(repl, text)
     return text
+
+
+# remove stop words from entire text
+def clean_text(text):
+    return clean_words(split_words(text))
+
+
+# remove stop words from list
+def clean_words(words):
+    cleaned = []
+    for word in words:
+        if word not in STOPWORDS:
+            cleaned.append(word)
+    return cleaned
+
+
+# stem entire text
+def stem_text(text):
+    words_stemmed = []
+    for word in split_words(text):
+        words_stemmed.append(STEMMER.stem(word))
+    return words_stemmed
+
+
+# stem list of words
+def stem_words(words):
+    words_stemmed = []
+    for word in words:
+        words_stemmed.append(STEMMER.stem(word))
+    return words_stemmed
 
 
 # combine neighbor sentences with one quote each
@@ -138,7 +172,7 @@ def split_words(text):
     tokens = []
     if text:
         tokens = word_tokenize(text)
-        tokens = [i for i in tokens if i not in punctuation]
+        tokens = [i.lower() for i in tokens if i not in punctuation]
     return tokens
 
 
@@ -191,9 +225,60 @@ if RUN_TEST and EXAMPLE_TEXT:
     # print(word_frequency)
 
 
+class AbstractTokenizer:
+    def __init__(self, _text, _stop_words):
+        self.text = prep_doc(_text)
+        self.words = []
+        self.words_cleaned = []
+        self.words_stemmed = []
+        self.paragraphs = []
+        self.sentences = []
+        self.stop_words = _stop_words
+        self.tokenize()
+
+    def tokenize(self):
+        # paragraphs
+        print("Parsing paragraphs...")
+        self.paragraphs = split_paragraphs(self.text)
+        # sentences
+        print("Parsing sentences...")
+        self.sentences = combine_quotes(split_sentences(self.text))
+        print("Parsing words...")
+        self.words = split_words(self.text)
+        self.words_cleaned = clean_words(self.words)
+        self.words_stemmed = stem_words(self.words_cleaned)
+        print("Done.")
+
+    def word_count(self, _cleaned=False, _stemmed=False, _normalize=False):
+        word_count = {}
+        words = self.words
+        if _cleaned:
+            words = self.words_cleaned
+        if _stemmed:
+            words = self.words_stemmed
+        if words:
+            c = Counter(words).most_common()
+            total_words = len(c)
+            for wc in c:
+                s = wc[0]
+                i = wc[1]
+                if _normalize:
+                    i = i / total_words
+                word_count[s] = i
+        return word_count
+
+
+class Ranker(AbstractTokenizer):
+    def __init__(self, _text, _stop_words=STOPWORDS_CUSTOM_BIG):
+        super(Ranker, self).__init__(_text, _stop_words)
+
+    def rank_sentences(self):
+        pass
+
+
 class Summarize:
     """
-    Represents concepts built from common key words from text
+    Summarize text from key words
     """
     def __init__(self, text):
         self.text = None
@@ -202,13 +287,11 @@ class Summarize:
         self.paragraphs = None
         self.sentences = None
         self.words = None
-        self.stemmer = None
-        self.lemmatizer = None
         self.generate(text)
 
     def generate(self, text):
         # content
-        self.text = clean_text(text)
+        self.text = prep_doc(text)
         # stop words
         self.stop_words = STOPWORDS_CUSTOM_BIG
         self.words_cleaned = []
@@ -221,40 +304,6 @@ class Summarize:
         print("Parsing words...")
         self.words = split_words(self.text)
         print("Done.")
-
-    # set stemmer type
-    def set_stemmer(self, stem_type):
-        if not stem_type:
-            self.stemmer = None
-        else:
-            stem_type = stem_type.lower()
-        if stem_type == "porter":
-            self.stemmer = PorterStemmer()
-        elif stem_type == "snowball":
-            self.stemmer = SnowballStemmer("english")
-
-    def set_lemmatizer(self, lem_type="default"):
-        self.stemmer = None
-        if not lem_type:
-            self.lemmatizer = None
-        else:
-            self.lemmatizer = WordNetLemmatizer()
-
-    # do stemming
-    def stem_words(self, text):
-        stemmed = []
-        if self.stemmer:
-            for word in self.clean_words(text):
-                stemmed.append(self.stemmer.stem(word))
-        return stemmed
-
-    # do lemming
-    def lem_words(self, text):
-        lemmed = []
-        if self.lemmatizer:
-            for word in self.clean_words(text):
-                lemmed.append(self.lemmatizer.lemmatize(word))
-        return lemmed
 
     # 2d array that compares likenesses of sentences
     def sent_intersections(self, clean=False):
@@ -287,21 +336,17 @@ class Summarize:
         for word in words:
             word = word.lower()
             if word not in self.stop_words:
-                if self.stemmer:
-                    word = self.stemmer.stem(word)
-                elif self.lemmatizer:
-                    word = self.lemmatizer.lemmatize(word)
                 cleaned.append(word)
         return cleaned
 
     def key_words(self, text, num=-1):
-        key_words = []
+        key_words = {}
         wf = self.word_frequency(text)
         if wf:
             if not num or num <= 0:
-                key_words = wf
-            else:
-                key_words = wf[:num]
+                num = len(wf)
+            for w in wf[:num]:
+                key_words[w[0]] = w[1]
         return key_words
 
     # return words and their frequency
@@ -321,7 +366,14 @@ class Sentence:
     Represents a sentence object
     """
     def __init__(self, text):
+        self.words_cleaned = []
+        self.words_stemmed = []
+        self.words = []
         # set sentence text
         self.text = text
         # split words
         self.words = split_words(self.text)
+        # filtered words
+        self.words_cleaned = clean_words(self.words)
+        # stem words
+        self.words_stemmed = stem_words(self.words)
