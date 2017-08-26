@@ -8,6 +8,17 @@ from collections import Counter
 import re
 
 
+
+"""
+ISSUES:
+Sentences are ranked based on the % of most common stemmed words. Long sentences have an advantage of 
+being ranked higher than shorter sentences simply because they have more words to sum.
+
+1) It's pointless to normalize word scores. Their rank ends up being the same whether it's averaged or not.
+2) I need to normalize sentence ranks. Longer sentences should require more key words than shorter ones.
+"""
+
+
 RUN_TEST = False
 LEM_WORDS = False
 STEMMER = PorterStemmer()
@@ -272,7 +283,7 @@ class AbstractTokenizer:
             words = self.words_stemmed
         if words:
             c = Counter(words).most_common()
-            total_words = len(c)
+            total_words = len(words)
             for wc in c:
                 s = wc[0]
                 i = wc[1]
