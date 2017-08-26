@@ -14,7 +14,9 @@ STEMMER = PorterStemmer()
 LEMMER = WordNetLemmatizer()
 EOS_CHARS = '.?!'
 EXAMPLE_TITLE = "Barcelona searches for van driver who killed more than dozen along iconic promenade"
+HARVEY_TITLE = "Hurricane Harvey hits Texas, bringing heavy rain, storm surge"
 EXAMPLE_FILE = 'sample.txt'
+HARVEY_FILE = 'harvey.txt'
 STOPWORDS_SMALL = set(stopwords.words('english'))
 STOPWORDS_CUSTOM = \
     {"a", "about", "above", "after", "again", "against", "all", "am", "an", "and", "any", "are", "aren't", "as",
@@ -124,9 +126,12 @@ def stem_words(words):
 def combine_quotes(sent_tokens):
     sentences = []
     index = 0
-    while index < len(sent_tokens)-1:
+    while index < len(sent_tokens):
         s1 = sent_tokens[index]
-        s2 = sent_tokens[index+1]
+        if index+1 < len(sent_tokens):
+            s2 = sent_tokens[index+1]
+        else:
+            s2 = ""
         if s1.count('"') == 1 and s2.count('"') == 1:
             s1 += " " + s2
             index += 2
@@ -139,7 +144,7 @@ def combine_quotes(sent_tokens):
 # read text from a file
 def read_file(filename=""):
     if not filename:
-        filename = EXAMPLE_FILE
+        filename = HARVEY_FILE
     with open(filename, encoding="utf8") as f:
         text = f.read()
         text = text.replace(u'\ufeff', '')
@@ -229,6 +234,7 @@ if RUN_TEST and EXAMPLE_TEXT:
 class AbstractTokenizer:
     def __init__(self, _text, _stop_words):
         self.text = prep_doc(_text)
+        self.doc = []
         self.words = []
         self.words_cleaned = []
         self.words_stemmed = []
