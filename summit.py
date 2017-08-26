@@ -232,7 +232,7 @@ if RUN_TEST and EXAMPLE_TEXT:
 
 
 class AbstractTokenizer:
-    def __init__(self, _text, _stop_words):
+    def __init__(self, _text):
         self.text = prep_doc(_text)
         self.doc = []
         self.words = []
@@ -240,28 +240,35 @@ class AbstractTokenizer:
         self.words_stemmed = []
         self.paragraphs = []
         self.sentences = []
-        self.stop_words = _stop_words
-        self.tokenize()
+        self.stop_words = STOPWORDS_CUSTOM_BIG
+        self.do_clean = False
+        self.do_stem = False
+        self.do_normalize = False
+        # self.tokenize()
 
-    def tokenize(self):
+    def tokenize(self, token_p=True, token_s=True, token_w=True):
         # paragraphs
-        print("Parsing paragraphs...")
-        self.paragraphs = split_paragraphs(self.text)
-        # sentences
-        print("Parsing sentences...")
-        self.sentences = combine_quotes(split_sentences(self.text))
-        print("Parsing words...")
-        self.words = split_words(self.text)
-        self.words_cleaned = clean_words(self.words)
-        self.words_stemmed = stem_words(self.words_cleaned)
-        print("Done.")
+        if token_p:
+            self.paragraphs = split_paragraphs(self.text)
+        if token_s:
+            # sentences
+            self.sentences = combine_quotes(split_sentences(self.text))
+        if token_w:
+            self.words = split_words(self.text)
+            self.words_cleaned = clean_words(self.words)
+            self.words_stemmed = stem_words(self.words_cleaned)
 
-    def word_count(self, _cleaned=False, _stemmed=False, _normalize=False):
+    def setup(self, _clean=False, _stem=False, _normalize=False):
+        self.do_clean = _clean
+        self.do_stem = _stem
+        self.do_normalize = _normalize
+
+    def word_count(self):
         word_count = {}
         words = self.words
-        if _cleaned:
+        if self.do_clean:
             words = self.words_cleaned
-        if _stemmed:
+        if self.do_stem:
             words = self.words_stemmed
         if words:
             c = Counter(words).most_common()
@@ -269,15 +276,36 @@ class AbstractTokenizer:
             for wc in c:
                 s = wc[0]
                 i = wc[1]
-                if _normalize:
+                if self.do_normalize:
                     i = i / total_words
                 word_count[s] = i
         return word_count
 
+    def key_words(self, _count=-1):
+        key_words = list(self.word_count())
+        if len(key_words) > 0:
+            if not _count or _count <= 0:
+                _count = len(key_words)
+            key_words = key_words[:_count]
+        return key_words
+
+
+class Paragraph(AbstractTokenizer):
+    def __init__(self, _text):
+        super(Paragraph, self).__init__(_text)
+        self.tokenize(token_p=False)
+
+
+class Sentence(AbstractTokenizer):
+    def __init__(self, _text):
+        super(Sentence, self).__init__(_text)
+        self.tokenize(token_p=False, token_s=False)
+
 
 class Ranker(AbstractTokenizer):
-    def __init__(self, _text, _stop_words=STOPWORDS_CUSTOM_BIG):
-        super(Ranker, self).__init__(_text, _stop_words)
+    def __init__(self, _text):
+        super(Ranker, self).__init__(_text)
+        self.tokenize()
 
     def top_sentences(self, _count=-1):
         # 25% if no count given
@@ -304,7 +332,8 @@ class Ranker(AbstractTokenizer):
         # stem sentence
         sent = stem_text(_sentence)
         # get word ranks
-        word_scores = self.word_count(_stemmed=True, _normalize=True)
+        self.setup(_stem=True, _normalize=True)
+        word_scores = self.word_count()
         # sum words in sentence
         score = 0
         for word in sent:
@@ -395,21 +424,3 @@ class Summarize:
             # sorted list
             word_freq = wf.most_common()
         return word_freq
-
-
-class Sentence:
-    """
-    Represents a sentence object
-    """
-    def __init__(self, text):
-        self.words_cleaned = []
-        self.words_stemmed = []
-        self.words = []
-        # set sentence text
-        self.text = text
-        # split words
-        self.words = split_words(self.text)
-        # filtered words
-        self.words_cleaned = clean_words(self.words)
-        # stem words
-        self.words_stemmed = stem_words(self.words)
