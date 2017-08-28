@@ -8,14 +8,16 @@ from collections import Counter
 import re
 
 
-
 """
 ISSUES:
-Sentences are ranked based on the % of most common stemmed words. Long sentences have an advantage of 
-being ranked higher than shorter sentences simply because they have more words to sum.
 
-1) It's pointless to normalize word scores. Their rank ends up being the same whether it's averaged or not.
-2) I need to normalize sentence ranks. Longer sentences should require more key words than shorter ones.
+- Key word scores can really skew sentence ranks. 
+Example:    
+Sentence 64 in Harvey article.
+'They are fresh and hot, and I am selling a lot of them because people are stocking up for the hurricane.'
+Has a score of 3.6665 despite it not really being "important". It contains the word 'hurricane' which is worth 
+14 points. The rest of the sentence is meaningless, but because it has the 2nd highest word value then it 
+ skews the whole sentence value.
 """
 
 
@@ -47,7 +49,7 @@ STOPWORDS_CUSTOM = \
      '``', }
 
 STOPWORDS_CUSTOM_BIG = \
-    {"a", "about", "above", "across", "after", "again", "against", "all", "almost", "alone", "along",
+    {"a", "about", "above", "across", "after", "again", "against", "all", "almost", "alone", "along", "am",
      "already", "also", "although", "always", "among", "an", "and", "another", "any", "anybody", "anyone", "anything",
      "anywhere", "are", "area", "areas", "around", "as", "ask", "asked", "asking", "asks", "at", "away", "b", "back",
      "backed", "backing", "backs", "be", "became", "because", "become", "becomes", "been", "before", "began", "behind",
@@ -67,7 +69,7 @@ STOPWORDS_CUSTOM_BIG = \
      "must", "my", "myself", "n", "necessary", "need", "needed", "needing", "needs", "never", "new", "new", "newer",
      "next", "no", "nobody", "non", "noone", "not", "nothing", "now", "nowhere", "number", "numbers", "o", "of", "off",
      "often", "old", "older", "oldest", "on", "once", "one", "only", "open", "opened", "opening", "opens", "or",
-     "order", "ordered", "ordering", "orders", "other", "others", "our", "out", "over", "p", "part", "parted",
+     "order", "ordered", "ordering", "orders", "other", "others", "our", "out", "over", "p", "part", "parted", "people",
      "parting", "parts", "per", "perhaps", "place", "places", "point", "pointed", "pointing", "points", "possible",
      "present", "presented", "presenting", "presents", "problem", "problems", "put", "puts", "q", "quite", "r",
      "rather", "really", "right", "right", "room", "rooms", "s", "said", "same", "saw", "say", "says", "second",
@@ -111,11 +113,13 @@ def trim_text(text, _stem=False):
 # remove stop words from list
 def trim_words(words, _stem=False):
     trimmed = []
-    if _stem:
-        words = stem_words(words)
+    # remove stop words
     for word in words:
         if word not in STOPWORDS:
             trimmed.append(word)
+    # stem after
+    if _stem:
+        trimmed = stem_words(trimmed)
     return trimmed
 
 
@@ -291,10 +295,6 @@ class AbstractTokenizer:
             if self.do_stem:
                 words = self.words_stemmed
         if words:
-            if self.do_trim:
-                words = trim_words(words)
-            elif self.do_stem:
-                words = stem_words(words)
             c = Counter(words).most_common()
             for wc in c:
                 s = wc[0]
@@ -328,6 +328,10 @@ class Ranker(AbstractTokenizer):
         super(Ranker, self).__init__(_text)
         self.setup(_trim=True, _stem=True, _normalize=True)
         self.tokenize()
+
+    def print_top_sentences(self, _count=-1):
+        for i in sorted(self.top_sentences(_count)):
+            print(self.sentences[i], " ")
 
     def top_sentences(self, _count=-1):
         # 25% if no count given
