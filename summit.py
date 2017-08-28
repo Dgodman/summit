@@ -80,7 +80,7 @@ STOPWORDS_CUSTOM_BIG = \
      "uses", "v", "very", "w", "want", "wanted", "wanting", "wants", "was", "way", "ways", "we", "well", "wells",
      "went", "were", "what", "when", "where", "whether", "which", "while", "who", "whole", "whose", "why", "will",
      "with", "within", "without", "work", "worked", "working", "works", "would", "x", "y", "year", "years", "yet",
-     "you", "young", "younger", "youngest", "your", "yours", "z", "—", "’", "“", "”", "\"", "''", '``', }
+     "you", "young", "younger", "youngest", "your", "yours", "z", "-", "—", "’", "“", "”", "\"", "''", '``', }
 
 STOPWORDS = STOPWORDS_CUSTOM_BIG
 
@@ -104,17 +104,19 @@ def prep_doc(text):
 
 
 # remove stop words from entire text
-def clean_text(text):
-    return clean_words(split_words(text))
+def trim_text(text, _stem=False):
+    return trim_words(split_words(text), _stem)
 
 
 # remove stop words from list
-def clean_words(words):
-    cleaned = []
+def trim_words(words, _stem=False):
+    trimmed = []
+    if _stem:
+        words = stem_words(words)
     for word in words:
         if word not in STOPWORDS:
-            cleaned.append(word)
-    return cleaned
+            trimmed.append(word)
+    return trimmed
 
 
 # stem entire text
@@ -247,12 +249,12 @@ class AbstractTokenizer:
         self.text = prep_doc(_text)
         self.doc = []
         self.words = []
-        self.words_cleaned = []
-        self.words_stemmed = []
         self.paragraphs = []
         self.sentences = []
+        self.words_trimmed = []
+        self.words_stemmed = []
         self.stop_words = STOPWORDS_CUSTOM_BIG
-        self.do_clean = False
+        self.do_trim = False
         self.do_stem = False
         self.do_normalize = False
         # self.tokenize()
@@ -266,34 +268,42 @@ class AbstractTokenizer:
             self.sentences = combine_quotes(split_sentences(self.text))
         if token_w:
             self.words = split_words(self.text)
-            self.words_cleaned = clean_words(self.words)
-            self.words_stemmed = stem_words(self.words_cleaned)
+            self.words_trimmed = trim_words(self.words)
+            self.words_stemmed = stem_words(self.words_trimmed)
 
-    def setup(self, _clean=False, _stem=False, _normalize=False):
-        self.do_clean = _clean
+    def setup(self, _trim=False, _stem=False, _normalize=False):
+        self.do_trim = _trim
         self.do_stem = _stem
         self.do_normalize = _normalize
 
-    def word_count(self):
+    def word_count(self, _text=None):
         word_count = {}
-        words = self.words
-        if self.do_clean:
-            words = self.words_cleaned
-        if self.do_stem:
-            words = self.words_stemmed
+        if _text:
+            words = split_words(_text)
+            if self.do_trim:
+                words = trim_words(words)
+            elif self.do_stem:
+                words = stem_words(trim_words(words))
+        else:
+            words = self.words
+            if self.do_trim:
+                words = self.words_trimmed
+            if self.do_stem:
+                words = self.words_stemmed
         if words:
+            if self.do_trim:
+                words = trim_words(words)
+            elif self.do_stem:
+                words = stem_words(words)
             c = Counter(words).most_common()
-            total_words = len(words)
             for wc in c:
                 s = wc[0]
                 i = wc[1]
-                if self.do_normalize:
-                    i = i / total_words
                 word_count[s] = i
         return word_count
 
-    def key_words(self, _count=-1):
-        key_words = list(self.word_count())
+    def key_words(self, _count=-1, _text=None):
+        key_words = list(self.word_count(_text))
         if len(key_words) > 0:
             if not _count or _count <= 0:
                 _count = len(key_words)
@@ -316,6 +326,7 @@ class Sentence(AbstractTokenizer):
 class Ranker(AbstractTokenizer):
     def __init__(self, _text):
         super(Ranker, self).__init__(_text)
+        self.setup(_trim=True, _stem=True, _normalize=True)
         self.tokenize()
 
     def top_sentences(self, _count=-1):
@@ -341,14 +352,15 @@ class Ranker(AbstractTokenizer):
 
     def score_sentence(self, _sentence):
         # stem sentence
-        sent = stem_text(_sentence)
+        sent = trim_text(_sentence, True)
         # get word ranks
-        self.setup(_stem=True, _normalize=True)
         word_scores = self.word_count()
         # sum words in sentence
         score = 0
         for word in sent:
             score += word_scores.get(word, 0)
+        if score > 0:
+            score = score / len(sent)
         return score
 
 
