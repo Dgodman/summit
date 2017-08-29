@@ -5,6 +5,8 @@ from nltk.stem.snowball import SnowballStemmer
 from nltk.stem import WordNetLemmatizer
 from string import punctuation
 from collections import Counter
+from networkx import from_numpy_matrix, pagerank
+from numpy import asarray
 import re
 
 
@@ -207,45 +209,10 @@ def sort_by_index(list_to_sort):
     return indices
 
 
-EXAMPLE_TEXT = read_file()
-if RUN_TEST and EXAMPLE_TEXT:
-    print(len(EXAMPLE_TEXT))
-    # tokenize text
-    print("WORD TOKENS")
-    word_tokens = split_words(EXAMPLE_TEXT)
-    print(word_tokens)
-    word_frequency = Counter(word_tokens)
-    print(word_frequency)
-    # filter stopwords
-    stop_words = set(stopwords.words('english'))
-    filtered_words = []
-    for w in word_tokens:
-        w = w.lower()
-        if w not in stop_words:
-            filtered_words.append(w)
-    # print filtered list
-    print("FILTERED WORD TOKENS")
-    print(filtered_words)
-    word_frequency = Counter(filtered_words)
-    print(word_frequency)
-    # stem word list
-    stemmed_words = []
-    stemmer = PorterStemmer()
-    # stemmer = SnowballStemmer("english")
-    # lemmer = WordNetLemmatizer()
-    # lemmed_words = []
-
-    for w in filtered_words:
-        # .append(lemmer.lemmatize(w))
-        stemmed_words.append(stemmer.stem(w))
-    # get frequency
-    word_frequency = Counter(stemmed_words)
-    print("FILTERED & STEMMED WORD TOKENS")
-    print(stemmed_words)
-    print(word_frequency)
-    # word_frequency = Counter(lemmed_words)
-    # print(lemmed_words)
-    # print(word_frequency)
+# use pagerank on sentence intersections
+def sent_ranks(sent_matrix):
+    if sent_matrix:
+        return pagerank(from_numpy_matrix(asarray(sent_matrix)))
 
 
 class AbstractTokenizer:
@@ -280,16 +247,18 @@ class AbstractTokenizer:
         self.do_stem = _stem
         self.do_normalize = _normalize
 
-    def word_count(self, _text=None):
+    def word_count(self, _text=None, _average=False):
         word_count = {}
         if _text:
             words = split_words(_text)
+            total_words = len(words)
             if self.do_trim:
                 words = trim_words(words)
             elif self.do_stem:
                 words = stem_words(trim_words(words))
         else:
             words = self.words
+            total_words = len(words)
             if self.do_trim:
                 words = self.words_trimmed
             if self.do_stem:
@@ -299,6 +268,8 @@ class AbstractTokenizer:
             for wc in c:
                 s = wc[0]
                 i = wc[1]
+                if _average:
+                    i = i / total_words
                 word_count[s] = i
         return word_count
 
@@ -367,6 +338,28 @@ class Ranker(AbstractTokenizer):
             score = score / len(sent)
         return score
 
+    def sent_matrix(self, _trim=True):
+        intersects = []
+        n = len(self.sentences)
+        if n > 0:
+            # zeroed 2d array
+            intersects = [[0] * n for _ in range(n)]
+            for i in range(0, n):
+                s1 = split_words(self.sentences[i])
+                if _trim:
+                    s1 = trim_words(s1)
+                s1 = set(s1)
+                for j in range(0, n):
+                    inter_val = 0
+                    if len(s1) > 0:
+                        s2 = split_words(self.sentences[j])
+                        if _trim:
+                            s2 = trim_words(s2)
+                        s2 = set(s2)
+                        inter_val = len(s1.intersection(s2)) / ((len(s1) + len(s2)) / 2)
+                    intersects[i][j] = inter_val
+        return intersects
+
 
 class Summarize:
     """
@@ -411,14 +404,17 @@ class Summarize:
                 else:
                     s1 = split_words(s1)
                 s1 = set(s1)
+                inter_val = 0
                 for j in range(0, n):
-                    s2 = self.sentences[j]
-                    if clean:
-                        s2 = self.clean_words(s2)
-                    else:
-                        s2 = split_words(s2)
-                    s2 = set(s2)
-                    intersects[i][j] = len(s1.intersection(s2)) / ((len(s1) + len(s2)) / 2)
+                    if len(s1) > 0:
+                        s2 = self.sentences[j]
+                        if clean:
+                            s2 = self.clean_words(s2)
+                        else:
+                            s2 = split_words(s2)
+                        s2 = set(s2)
+                        inter_val = len(s1.intersection(s2)) / ((len(s1) + len(s2)) / 2)
+                    intersects[i][j] = inter_val
         return intersects
 
     # remove stop words
@@ -451,3 +447,43 @@ class Summarize:
             # sorted list
             word_freq = wf.most_common()
         return word_freq
+
+EXAMPLE_TEXT = read_file()
+if RUN_TEST and EXAMPLE_TEXT:
+    print(len(EXAMPLE_TEXT))
+    # tokenize text
+    print("WORD TOKENS")
+    word_tokens = split_words(EXAMPLE_TEXT)
+    print(word_tokens)
+    word_frequency = Counter(word_tokens)
+    print(word_frequency)
+    # filter stopwords
+    stop_words = set(stopwords.words('english'))
+    filtered_words = []
+    for w in word_tokens:
+        w = w.lower()
+        if w not in stop_words:
+            filtered_words.append(w)
+    # print filtered list
+    print("FILTERED WORD TOKENS")
+    print(filtered_words)
+    word_frequency = Counter(filtered_words)
+    print(word_frequency)
+    # stem word list
+    stemmed_words = []
+    stemmer = PorterStemmer()
+    # stemmer = SnowballStemmer("english")
+    # lemmer = WordNetLemmatizer()
+    # lemmed_words = []
+
+    for w in filtered_words:
+        # .append(lemmer.lemmatize(w))
+        stemmed_words.append(stemmer.stem(w))
+    # get frequency
+    word_frequency = Counter(stemmed_words)
+    print("FILTERED & STEMMED WORD TOKENS")
+    print(stemmed_words)
+    print(word_frequency)
+    # word_frequency = Counter(lemmed_words)
+    # print(lemmed_words)
+    # print(word_frequency)
