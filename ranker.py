@@ -94,7 +94,7 @@ class Rankit(AbstractTokenizer):
             for w2 in _words2:
                 rank += int(w1 == w2)
         if rank > 0 and len(_words1) > 0 and len(_words2) > 0:
-            norm = log(len(_words1)) + log(len(_words2))
+            norm = (log(len(_words1)) + log(len(_words2)))/2
         if not norm or norm == 0.0:
             return 0.0
         else:
