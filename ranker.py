@@ -95,7 +95,6 @@ class Rankit(AbstractTokenizer):
                 rank += int(w1 == w2)
         if rank > 0 and len(_words1) > 0 and len(_words2) > 0:
             norm = log(len(_words1)) + log(len(_words2))
-            #norm = log((len(_words1) + len(_words2)) / 2)
         if not norm or norm == 0.0:
             return 0.0
         else:
@@ -126,13 +125,35 @@ class Rankit(AbstractTokenizer):
                 sentence_ranks.append(rank)
         return sentence_ranks
 
-    def rank_sentences(self, _count=-1):
+    def print_ranked_paragraphs(self, _count=-1):
         if not _count or _count <= 0:
-            _count = int(len(self.sentences) * 0.25)
-        scores = self.score_sentences()
-        return sort_by_index(scores)[:_count]
+            _count = int(len(self.sentences) * 0.20)
+        ranked_indexes = sorted(self.rank_paragraphs()[:_count])
+        if len(ranked_indexes) > 0:
+            rank_text = ""
+            for i in ranked_indexes:
+                rank_text += self.paragraphs[i] + "\n"
+            print(rank_text)
+        else:
+            print("No paragraphs to print.")
 
-    def rank_paragraphs(self, _count=-1):
+    def print_ranked_sentences(self, _count=-1):
+        if not _count or _count <= 0:
+            _count = int(len(self.sentences) * 0.20)
+        ranked_indexes = sorted(self.rank_sentences()[:_count])
+        if len(ranked_indexes) > 0:
+            rank_text = ""
+            for i in ranked_indexes:
+                rank_text += self.sentences[i] + " "
+            print(rank_text)
+        else:
+            print("No sentences to print.")
+
+    def rank_sentences(self):
+        scores = self.score_sentences()
+        return sort_by_index(scores)
+
+    def rank_paragraphs(self):
         inters = []
         key_list = []
         # get length
