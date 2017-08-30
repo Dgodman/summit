@@ -94,7 +94,8 @@ class Rankit(AbstractTokenizer):
             for w2 in _words2:
                 rank += int(w1 == w2)
         if rank > 0 and len(_words1) > 0 and len(_words2) > 0:
-            norm = (log(len(_words1)) + log(len(_words2)))/2
+            norm = log(len(_words1)) + log(len(_words2))
+            #norm = log((len(_words1) + len(_words2)) / 2)
         if not norm or norm == 0.0:
             return 0.0
         else:
@@ -108,13 +109,13 @@ class Rankit(AbstractTokenizer):
             sentence_matrix = [[0.0] * n for _ in range(n)]
             # rows
             for i in range(0, n):
-                s1 = self.clean_words(self.sentences[i])
+                s1 = self.get_sentence_words(i)
                 s1 = set(s1)
                 # columns
                 for j in range(0, n):
                     rank = 0.0
                     if len(s1) > 0 and i != j:
-                        s2 = self.clean_words(self.sentences[j])
+                        s2 = self.get_sentence_words(j)
                         s2 = set(s2)
                         rank = self.rank_edges(s1, s2)
                     sentence_matrix[i][j] = rank
@@ -148,5 +149,4 @@ class Rankit(AbstractTokenizer):
                     k2 = set(key_list[j])
                     interval += len(k1.intersection(k2))
             inters.append(interval)
-        #return sort_by_index(inters)
-        return inters
+        return sort_by_index(inters)
