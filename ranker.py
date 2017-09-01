@@ -94,9 +94,6 @@ class AbstractTokenizer:
 
     def get_phrases(self, _phrase_length=2):
         phrase_dict = defaultdict(float)
-        # turn off stemmer
-        old_stemmer = self.stemmer
-        self.stemmer = None
         # loop sentences
         for sent in self.sentences:
             # get word list from sentence
@@ -110,8 +107,6 @@ class AbstractTokenizer:
                 for j in range(i + 1, max_j):
                     phrase += " " + word_list[j]
                     phrase_dict[phrase] += 1
-        # reset stemmer
-        self.stemmer = old_stemmer
         # remove items with 1 or less
         phrases = {}
         for k, v in phrase_dict.items():
@@ -171,18 +166,6 @@ class Rankit(AbstractTokenizer):
                 sentence_ranks.append(rank)
         return sentence_ranks
 
-    def print_ranked_paragraphs(self, _count=-1):
-        if not _count or _count <= 0:
-            _count = int(len(self.sentences) * 0.20)
-        ranked_indexes = sorted(self.rank_paragraphs()[:_count])
-        if len(ranked_indexes) > 0:
-            rank_text = ""
-            for i in ranked_indexes:
-                rank_text += self.paragraphs[i] + "\n"
-            print(rank_text)
-        else:
-            print("No paragraphs to print.")
-
     def print_ranked_sentences(self, _count=-1):
         if not _count or _count <= 0:
             _count = int(len(self.sentences) * 0.20)
@@ -198,6 +181,18 @@ class Rankit(AbstractTokenizer):
     def rank_sentences(self):
         scores = self.score_sentences()
         return sort_by_index(scores)
+
+    def print_ranked_paragraphs(self, _count=-1):
+        if not _count or _count <= 0:
+            _count = int(len(self.sentences) * 0.20)
+        ranked_indexes = sorted(self.rank_paragraphs()[:_count])
+        if len(ranked_indexes) > 0:
+            rank_text = ""
+            for i in ranked_indexes:
+                rank_text += self.paragraphs[i] + "\n"
+            print(rank_text)
+        else:
+            print("No paragraphs to print.")
 
     def rank_paragraphs(self):
         inters = []
