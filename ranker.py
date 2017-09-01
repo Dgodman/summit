@@ -1,5 +1,7 @@
 from utils import *
 from math import log
+from collections import defaultdict
+from operator import itemgetter
 
 
 class AbstractTokenizer:
@@ -8,10 +10,10 @@ class AbstractTokenizer:
         self.paragraphs = []
         self.sentences = []
         self.words = []
+        self.sentence_words = []
         self.stop_words = STOPWORDS_CUSTOM_BIG
-        self.stemmer = None
-        if stem_lang.lower() == "english":
-            self.stemmer = SnowballStemmer("english")
+        self.language = None
+        self.stemming(stem_lang)
 
     def tokenize(self, _text, token_p=True, token_s=True, token_w=True):
         self.text = prep_doc(_text)
@@ -23,6 +25,22 @@ class AbstractTokenizer:
             self.sentences = split_sentences(self.text)
         if token_w:
             self.words = self.clean_words(_text)
+
+    def stemming(self, stem_lang=None):
+        # save last language used
+        last_language = self.language
+        # stemmer off
+        self.stemmer = None
+        self.language = None
+        # turn on?
+        if stem_lang:
+            # which language
+            self.language = stem_lang.lower()
+            if self.language == "english":
+                self.stemmer = SnowballStemmer(self.language)
+        # if language changed, clear cleaned list
+        if last_language != self.language:
+            self.sentence_words = []
 
     # split text into words + filter words + stem words
     def clean_words(self, _text):
@@ -68,23 +86,51 @@ class AbstractTokenizer:
             _text = self.text
         return list(self.word_frequency(_text))
 
+    def get_sentence_words(self, i):
+        words = self.sentence_words[i]
+        if not words:
+            words = self.clean_words(self.sentences[i])
+        return words
+
+    def get_phrases(self, _phrase_length=2):
+        phrase_dict = defaultdict(float)
+        # turn off stemmer
+        old_stemmer = self.stemmer
+        self.stemmer = None
+        # loop sentences
+        for sent in self.sentences:
+            # get word list from sentence
+            word_list = self.clean_words(sent)
+            # get length of list
+            n = len(word_list)
+            # create dict[word[n] word[n+1]]
+            for i in range(0, n):
+                max_j = min(i + _phrase_length, n)
+                phrase = word_list[i]
+                for j in range(i + 1, max_j):
+                    phrase += " " + word_list[j]
+                    phrase_dict[phrase] += 1
+        # reset stemmer
+        self.stemmer = old_stemmer
+        # remove items with 1 or less
+        phrases = {}
+        for k, v in phrase_dict.items():
+            if v > 1:
+                phrases[k] = v
+        if phrases:
+            phrases = sorted(phrases.items(), key=itemgetter(1), reverse=True)
+        return phrases
+
 
 class Rankit(AbstractTokenizer):
     def __init__(self, stem_lang="english"):
         super(Rankit, self).__init__(stem_lang)
-        self.sentence_words = []
 
     def tokenize(self, _text, token_p=True, token_s=True, token_w=True):
         super(Rankit, self).tokenize(_text, token_p, token_s, token_w)
         for sent in self.sentences:
             words = self.clean_words(sent)
             self.sentence_words.append(words)
-
-    def get_sentence_words(self, i):
-        words = self.sentence_words[i]
-        if not words:
-            words = self.clean_words(self.sentences[i])
-        return words
 
     @staticmethod
     def rank_edges(_words1, _words2):
