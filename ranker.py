@@ -24,7 +24,10 @@ class AbstractTokenizer:
             # sentences
             self.sentences = split_sentences(self.text)
         if token_w:
-            self.words = self.clean_words(_text)
+            for sent in self.sentences:
+                words = self.clean_words(sent)
+                self.sentence_words.append(words)
+                self.words.extend(words)
 
     def stemming(self, stem_lang=None):
         # save last language used
@@ -123,9 +126,6 @@ class Rankit(AbstractTokenizer):
 
     def tokenize(self, _text, token_p=True, token_s=True, token_w=True):
         super(Rankit, self).tokenize(_text, token_p, token_s, token_w)
-        for sent in self.sentences:
-            words = self.clean_words(sent)
-            self.sentence_words.append(words)
 
     @staticmethod
     def rank_edges(_words1, _words2):
