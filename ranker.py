@@ -2,10 +2,18 @@ from utils import *
 from math import log
 from collections import defaultdict
 from operator import itemgetter
+from nltk.stem import PorterStemmer
+from nltk.stem.snowball import SnowballStemmer
+from nltk.stem import WordNetLemmatizer
+
+
+PORTER = PorterStemmer()
+SNOWBALL = SnowballStemmer('english')
+WORDNET = WordNetLemmatizer()
 
 
 class AbstractTokenizer:
-    def __init__(self, stem_lang=None):
+    def __init__(self, _stemmer=PORTER):
         self.text = ""
         self.paragraphs = []
         self.sentences = []
@@ -13,7 +21,13 @@ class AbstractTokenizer:
         self.sentence_words = []
         self.stop_words = STOPWORDS_CUSTOM_BIG
         self.language = None
-        self.stemming(stem_lang)
+        self.stemmer = _stemmer
+
+    def __call__(self, _stemmer=None):
+        if _stemmer:
+            self.sentence_words = []
+            self.words = []
+            self.stemmer = _stemmer
 
     def tokenize(self, _text, token_p=True, token_s=True, token_w=True):
         self.text = prep_doc(_text)
@@ -29,21 +43,13 @@ class AbstractTokenizer:
                 self.sentence_words.append(words)
                 self.words.extend(words)
 
-    def stemming(self, stem_lang=None):
-        # save last language used
-        last_language = self.language
-        # stemmer off
-        self.stemmer = None
-        self.language = None
-        # turn on?
-        if stem_lang:
-            # which language
-            self.language = stem_lang.lower()
-            if self.language == "english":
-                self.stemmer = SnowballStemmer(self.language)
-        # if language changed, clear cleaned list
-        if last_language != self.language:
-            self.sentence_words = []
+    def stem(self, _word):
+        if self.stemmer and _word:
+            if isinstance(self.stemmer, WordNetLemmatizer):
+                return self.stemmer.lemmatize(_word)
+            else:
+                return self.stemmer.stem(_word)
+        return _word
 
     # split text into words + filter words + stem words
     def clean_words(self, _text):
@@ -120,12 +126,12 @@ class AbstractTokenizer:
         return phrases
 
 
-class Rankit(AbstractTokenizer):
-    def __init__(self, stem_lang="english"):
-        super(Rankit, self).__init__(stem_lang)
+class Dockus(AbstractTokenizer):
+    def __init__(self, _stemmer=PORTER):
+        super(Dockus, self).__init__(_stemmer)
 
     def tokenize(self, _text, token_p=True, token_s=True, token_w=True):
-        super(Rankit, self).tokenize(_text, token_p, token_s, token_w)
+        super(Dockus, self).tokenize(_text, token_p, token_s, token_w)
 
     @staticmethod
     def rank_edges(_words1, _words2):

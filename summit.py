@@ -5,8 +5,6 @@ from nltk.stem.snowball import SnowballStemmer
 from nltk.stem import WordNetLemmatizer
 from string import punctuation
 from collections import Counter
-from networkx import from_numpy_matrix, pagerank
-from numpy import asarray
 import re
 
 
