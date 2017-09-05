@@ -5,6 +5,8 @@ from operator import itemgetter
 from nltk.stem import PorterStemmer
 from nltk.stem.snowball import SnowballStemmer
 from nltk.stem import WordNetLemmatizer
+from collections import Counter
+from difflib import get_close_matches
 
 
 PORTER = PorterStemmer()
@@ -13,23 +15,26 @@ WORDNET = WordNetLemmatizer()
 
 
 class AbstractTokenizer:
-    def __init__(self, _stemmer=PORTER):
+    def __init__(self, _stemmer=None, _stopwords=STOPWORDS_CUSTOM_BIG):
         self.text = ""
         self.paragraphs = []
         self.sentences = []
         self.words = []
         self.sentence_words = []
-        self.stop_words = STOPWORDS_CUSTOM_BIG
-        self.language = None
+        self.stop_words = _stopwords
         self.stemmer = _stemmer
 
-    def __call__(self, _stemmer=None):
-        if _stemmer:
+    def __call__(self, _stemmer=None, _stopwords=None):
+        if _stemmer or _stopwords:
             self.sentence_words = []
             self.words = []
-            self.stemmer = _stemmer
+            if _stemmer:
+                self.stemmer = _stemmer
+            if _stopwords:
+                self.stop_words = _stopwords
 
     def tokenize(self, _text, token_p=True, token_s=True, token_w=True):
+        self.reset_vars()
         self.text = prep_doc(_text)
         # paragraphs
         if token_p:
@@ -43,10 +48,22 @@ class AbstractTokenizer:
                 self.sentence_words.append(words)
                 self.words.extend(words)
 
+    def reset_vars(self):
+        self.text = ""
+        self.paragraphs = []
+        self.sentences = []
+        self.words = []
+        self.sentence_words = []
+
     def stem(self, _word):
         if self.stemmer and _word:
             if isinstance(self.stemmer, WordNetLemmatizer):
-                return self.stemmer.lemmatize(_word)
+                noun = self.stemmer.lemmatize(_word, 'n')
+                verb = self.stemmer.lemmatize(_word, 'v')
+                if verb != _word:
+                    return verb
+                else:
+                    return noun
             else:
                 return self.stemmer.stem(_word)
         return _word
@@ -72,7 +89,7 @@ class AbstractTokenizer:
         stemmed = []
         if _word_list and self.stemmer:
             for word in _word_list:
-                stemmed.append(self.stemmer.stem(word))
+                stemmed.append(self.stem(word))
             return stemmed
         else:
             return _word_list
@@ -89,6 +106,21 @@ class AbstractTokenizer:
                 i = wc[1]
                 word_count[s] = i
         return word_count
+
+    def wf(self, _text=None):
+        word_count = {}
+        if not _text:
+            _text = self.text
+        word_list = self.clean_words(_text)
+        key_list = set()
+        for word in word_list:
+            # find words that match
+            matches = get_close_matches(word, key_list, 1, 0.95)
+            if matches:
+                word = matches[0]
+            word_count[word] = word_count.get(word, 0) + 1
+            key_list.add(word)
+        return sort_dict(word_count)
 
     def key_words(self, _text=None):
         if not _text:
@@ -127,7 +159,7 @@ class AbstractTokenizer:
 
 
 class Dockus(AbstractTokenizer):
-    def __init__(self, _stemmer=PORTER):
+    def __init__(self, _stemmer=WORDNET):
         super(Dockus, self).__init__(_stemmer)
 
     def tokenize(self, _text, token_p=True, token_s=True, token_w=True):
@@ -183,6 +215,7 @@ class Dockus(AbstractTokenizer):
             print(rank_text)
         else:
             print("No sentences to print.")
+        return rank_text
 
     def rank_sentences(self):
         scores = self.score_sentences()

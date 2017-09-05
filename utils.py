@@ -1,7 +1,7 @@
 from nltk.tokenize import sent_tokenize, word_tokenize
 from nltk.corpus import stopwords
 from string import punctuation
-from collections import Counter
+from operator import itemgetter
 import re
 
 EXAMPLE_TITLE = "Barcelona searches for van driver who killed more than dozen along iconic promenade"
@@ -24,7 +24,7 @@ STOPWORDS_CUSTOM = \
      "we", "we'd", "we'll", "we're", "we've", "were", "weren't", "what", "what's", "when", "when's", "where",
      "where's", "which", "while", "who", "who's", "whom", "why", "why's", "with", "won't", "would", "wouldn't", "you",
      "you'd", "you'll", "you're", "you've", "your", "yours", "yourself", "yourselves", "—", "’", "“", "”", "\"", "''",
-     '``', }
+     '``', "'s"}
 
 STOPWORDS_CUSTOM_BIG = \
     {"a", "about", "above", "across", "after", "again", "against", "all", "almost", "alone", "along", "am",
@@ -60,7 +60,7 @@ STOPWORDS_CUSTOM_BIG = \
      "uses", "v", "very", "w", "want", "wanted", "wanting", "wants", "was", "way", "ways", "we", "well", "wells",
      "went", "were", "what", "when", "where", "whether", "which", "while", "who", "whole", "whose", "why", "will",
      "with", "within", "without", "work", "worked", "working", "works", "would", "x", "y", "year", "years", "yet",
-     "you", "young", "younger", "youngest", "your", "yours", "z", "-", "—", "’", "“", "”", "\"", "''", '``',}
+     "you", "young", "younger", "youngest", "your", "yours", "z", "-", "—", "’", "“", "”", "\"", "''", '``', "'s"}
 
 clean_regexps = [
     # uniform quotes
@@ -147,3 +147,8 @@ def sort_by_index(list_to_sort):
         indices = list(range(len(list_to_sort)))
         indices.sort(reverse=True, key=lambda x: list_to_sort[x])
     return indices
+
+
+def sort_dict(dict_to_sort, _reverse=True):
+    sorted_list = sorted(dict_to_sort.items(), key=itemgetter(1), reverse=_reverse)
+    return dict(sorted_list)
