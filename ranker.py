@@ -218,12 +218,12 @@ class AbstractTokenizer:
         return phrases
 
 
-class Dockus(AbstractTokenizer):
+class Summus(AbstractTokenizer):
     def __init__(self, _stemmer=WORDNET):
-        super(Dockus, self).__init__(_stemmer)
+        super(Summus, self).__init__(_stemmer)
 
     def tokenize(self, _text, token_p=True, token_s=True, token_w=True):
-        super(Dockus, self).tokenize(_text, token_p, token_s, token_w)
+        super(Summus, self).tokenize(_text, token_p, token_s, token_w)
 
     @staticmethod
     def rank_edges(_words1, _words2):
@@ -268,13 +268,13 @@ class Dockus(AbstractTokenizer):
         if not _count or _count <= 0:
             _count = int(len(self.sentences) * 0.20)
         ranked_indexes = sorted(self.rank_sentences()[:_count])
+        rank_text = ""
         if len(ranked_indexes) > 0:
-            rank_text = ""
             for i in ranked_indexes:
                 rank_text += self.sentences[i] + " "
             print(rank_text)
         else:
-            print("No sentences to print.")
+            print("Nothing here to print.")
         return rank_text
 
     def rank_sentences(self):
