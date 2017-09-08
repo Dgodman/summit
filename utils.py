@@ -1,6 +1,4 @@
-from nltk.tokenize import sent_tokenize, word_tokenize
 from nltk.corpus import stopwords
-from string import punctuation
 from operator import itemgetter
 import re
 
@@ -24,7 +22,7 @@ STOPWORDS_CUSTOM = \
      "we", "we'd", "we'll", "we're", "we've", "were", "weren't", "what", "what's", "when", "when's", "where",
      "where's", "which", "while", "who", "who's", "whom", "why", "why's", "with", "won't", "would", "wouldn't", "you",
      "you'd", "you'll", "you're", "you've", "your", "yours", "yourself", "yourselves", "—", "’", "“", "”", "\"", "''",
-     '``', "'s"}
+     '``', "'s", "n't"}
 
 STOPWORDS_CUSTOM_BIG = \
     {"a", "about", "above", "across", "after", "again", "against", "all", "almost", "alone", "along", "am",
@@ -60,7 +58,8 @@ STOPWORDS_CUSTOM_BIG = \
      "uses", "v", "very", "w", "want", "wanted", "wanting", "wants", "was", "way", "ways", "we", "well", "wells",
      "went", "were", "what", "when", "where", "whether", "which", "while", "who", "whole", "whose", "why", "will",
      "with", "within", "without", "work", "worked", "working", "works", "would", "x", "y", "year", "years", "yet",
-     "you", "young", "younger", "youngest", "your", "yours", "z", "-", "—", "’", "“", "”", "\"", "''", '``', "'s"}
+     "you", "young", "younger", "youngest", "your", "yours", "z", "-", "—", "’", "“", "”", "\"", "''", '``', "'s",
+     "n't"}
 
 clean_regexps = [
     # uniform quotes
@@ -69,27 +68,8 @@ clean_regexps = [
     (re.compile(r'“'), r'"'),
     (re.compile(r'”'), r'"'),
     # move punctuation outside quotes
-    (re.compile(r'([\w])([.!?])(\")'), r'\1\3\2'),
+    (re.compile(r'([.!?])(\")'), r'\2\1'),
 ]
-
-
-# combine neighbor sentences with one quote each
-def combine_quotes(sent_tokens):
-    sentences = []
-    index = 0
-    while index < len(sent_tokens):
-        s1 = sent_tokens[index]
-        if index+1 < len(sent_tokens):
-            s2 = sent_tokens[index+1]
-        else:
-            s2 = ""
-        if s1.count('"') == 1 and s2.count('"') == 1:
-            s1 += " " + s2
-            index += 2
-        else:
-            index += 1
-        sentences.append(s1)
-    return sentences
 
 
 # read text from a file
@@ -104,42 +84,6 @@ def read_file(filename=""):
     return text
 
 
-# tokenize by paragraphs
-def split_paragraphs(text):
-    tokens = []
-    if text:
-        # replace with single newlines
-        temp_text = re.sub(r'\n+', '\n', text).strip()
-        tokens = temp_text.split('\n')
-    return tokens
-
-
-# tokenize by sentences
-def split_sentences(text):
-    tokens = []
-    if text:
-        temp_text = re.sub(r'\n+', ' ', text).strip()
-        tokens = sent_tokenize(temp_text)
-    return tokens
-
-
-# tokenize by words
-def split_words(text):
-    tokens = []
-    if text:
-        tokens = word_tokenize(text)
-        tokens = [i.lower() for i in tokens if i not in punctuation]
-    return tokens
-
-
-# clean up text with regexpr
-def prep_doc(text):
-    if text:
-        for (regexp, repl) in clean_regexps:
-            text = regexp.sub(repl, text)
-    return text
-
-
 # sort a list and return its sorted indexes
 def sort_by_index(list_to_sort):
     indices = []
@@ -149,6 +93,7 @@ def sort_by_index(list_to_sort):
     return indices
 
 
+# does what it says
 def sort_dict(dict_to_sort, _reverse=True):
     sorted_list = sorted(dict_to_sort.items(), key=itemgetter(1), reverse=_reverse)
     return dict(sorted_list)

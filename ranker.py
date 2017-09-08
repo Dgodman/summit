@@ -7,6 +7,8 @@ from nltk.stem.snowball import SnowballStemmer
 from nltk.stem import WordNetLemmatizer
 from collections import Counter
 from difflib import get_close_matches
+from nltk.tokenize import sent_tokenize, word_tokenize
+from string import punctuation
 
 
 PORTER = PorterStemmer()
@@ -33,15 +35,73 @@ class AbstractTokenizer:
             if _stopwords:
                 self.stop_words = _stopwords
 
+    # combine sentences surrounded by quotes
+    @staticmethod
+    def combine_quotes(sent_list):
+        combined_sentences = []
+        i = 0
+        length = len(sent_list)
+        while i < length:
+            s1 = sent_list[i]
+            if s1.count('"') == 1:
+                j = i + 1
+                while i != j and j < length:
+                    s2 = sent_list[j]
+                    if s2.count('"') == 1:
+                        s1 += s2
+                        i = j
+                    else:
+                        j += 1
+            i += 1
+            combined_sentences.append(s1)
+        return combined_sentences
+
+    # tokenize by paragraphs
+    @staticmethod
+    def split_paragraphs(text):
+        tokens = []
+        if text:
+            # replace with single newlines
+            temp_text = re.sub(r'\n+', '\n', text).strip()
+            tokens = temp_text.split('\n')
+        return tokens
+
+    # tokenize by sentences
+    @classmethod
+    def split_sentences(cls, text):
+        tokens = []
+        if text:
+            temp_text = re.sub(r'\n+', ' ', text).strip()
+            tokens = sent_tokenize(temp_text)
+        return cls.combine_quotes(tokens)
+
+    # tokenize by words
+    @staticmethod
+    def split_words(text):
+        tokens = []
+        if text:
+            tokens = word_tokenize(text)
+            tokens = [i.lower() for i in tokens if i not in punctuation]
+        return tokens
+
+    # clean up text with regexpr
+    @staticmethod
+    def prep_doc(text):
+        if text:
+            text = text.replace('\u200b', '')
+            for (regexp, repl) in clean_regexps:
+                text = regexp.sub(repl, text)
+        return text
+
     def tokenize(self, _text, token_p=True, token_s=True, token_w=True):
         self.reset_vars()
-        self.text = prep_doc(_text)
+        self.text = self.prep_doc(_text)
         # paragraphs
         if token_p:
-            self.paragraphs = split_paragraphs(self.text)
+            self.paragraphs = self.split_paragraphs(self.text)
         if token_s:
             # sentences
-            self.sentences = split_sentences(self.text)
+            self.sentences = self.split_sentences(self.text)
         if token_w:
             for sent in self.sentences:
                 words = self.clean_words(sent)
@@ -70,7 +130,7 @@ class AbstractTokenizer:
 
     # split text into words + filter words + stem words
     def clean_words(self, _text):
-        return self.stem_words(self.filter_stop_words(split_words(_text)))
+        return self.stem_words(self.filter_stop_words(self.split_words(_text)))
 
     # remove stop words from list
     def filter_stop_words(self, _word_list):
