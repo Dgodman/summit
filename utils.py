@@ -6,11 +6,12 @@ EXAMPLE_TITLE = "Barcelona searches for van driver who killed more than dozen al
 HARVEY_TITLE = "Hurricane Harvey hits Texas, bringing heavy rain, storm surge"
 EXAMPLE_FILE = 'sample.txt'
 HARVEY_FILE = 'harvey.txt'
+STEM_DICT = {'sen.': 'senator'}
 STOPWORDS_NLTK = set(stopwords.words('english'))
 STOPWORDS_CUSTOM = \
     {"a", "about", "above", "after", "again", "against", "all", "am", "an", "and", "any", "are", "aren't", "as",
      "at", "be", "because", "been", "before", "being", "below", "between", "both", "but", "by", "can't", "cannot",
-     "could", "couldn't", "did", "didn't", "do", "does", "doesn't", "doing", "don't",
+     "could", "couldn't", "did", "didn't", "do", "does", "doesn't", "doing", "don't", 'b', 's', 't', 'r', 'l', 'c,',
      "down", "during", "each", "few", "for", "from", "further", "had", "hadn't", 'has', "hasn't", "have", "haven't",
      "having", "he", "he'd", "he'll", "he's", "her", "here", "here's", "hers", "herself", "him", "himself", "his",
      "how", "how's", "i", "i'd", "i'll", "i'm", "i've", "if", "in", "into", "is", "isn't", "it", "it's", "its",

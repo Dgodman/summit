@@ -1,4 +1,5 @@
 import feedparser
+from newspaper import Article
 
 
 # right
@@ -22,5 +23,9 @@ fp = feedparser.parse(breitbart_url)
 feed_title = fp['feed']['title']  # 'Breitbart News'
 feed_link = fp['feed']['link']  # 'http://www.breitbart.com'
 # print titles, url
-for post in fp.entries:
-    print(post.title, post.link)
+for entry in fp.entries:
+    print(entry.title, entry.link)
+
+a = Article(fp.entries[0].link)
+a.download()
+a.parse()

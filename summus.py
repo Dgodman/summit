@@ -17,7 +17,7 @@ WORDNET = WordNetLemmatizer()
 
 
 class AbstractTokenizer:
-    def __init__(self, _stemmer=None, _stopwords=STOPWORDS_CUSTOM_BIG):
+    def __init__(self, _stemmer=None, _stopwords=STOPWORDS_CUSTOM):
         self.text = ""
         self.paragraphs = []
         self.sentences = []
@@ -117,6 +117,7 @@ class AbstractTokenizer:
 
     def stem(self, _word):
         if self.stemmer and _word:
+            _word = STEM_DICT.get(_word, _word)
             if isinstance(self.stemmer, WordNetLemmatizer):
                 noun = self.stemmer.lemmatize(_word, 'n')
                 verb = self.stemmer.lemmatize(_word, 'v')
@@ -219,8 +220,14 @@ class AbstractTokenizer:
 
 
 class Summus(AbstractTokenizer):
-    def __init__(self, _stemmer=WORDNET):
+    def __init__(self, _text=None, _stemmer=WORDNET):
         super(Summus, self).__init__(_stemmer)
+        if _text:
+            self.tokenize(_text)
+
+    def __call__(self, _text=None):
+        if _text:
+            self.tokenize(_text)
 
     def tokenize(self, _text, token_p=True, token_s=True, token_w=True):
         super(Summus, self).tokenize(_text, token_p, token_s, token_w)
