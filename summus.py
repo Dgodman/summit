@@ -239,9 +239,9 @@ class Summus(AbstractTokenizer):
         for w1 in _words1:
             for w2 in _words2:
                 rank += int(w1 == w2)
-        if rank > 0 and len(_words1) > 0 and len(_words2) > 0:
+        if len(_words1) > 0 and len(_words2) > 0:
             norm = log(len(_words1)) + log(len(_words2))
-        if not norm or norm == 0.0:
+        if norm == 0.0:
             return 0.0
         else:
             return rank / norm
@@ -312,9 +312,15 @@ class Summus(AbstractTokenizer):
         for i in range(0, n):
             interval = 0
             k1 = set(key_list[i])
+            k2 = set()
             for j in range(0, n):
                 if i != j:
                     k2 = set(key_list[j])
                     interval += len(k1.intersection(k2))
+            norm = log(len(k1)) + log(len(k2))
+            if norm == 0.0:
+                interval = 0.0
+            else:
+                interval = interval / norm
             inters.append(interval)
         return sort_by_index(inters)
