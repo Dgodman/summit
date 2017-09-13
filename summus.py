@@ -124,7 +124,7 @@ class AbstractTokenizer:
                 if verb != _word:
                     return verb
                 else:
-                    return noun
+                    return self.finagle(noun)
             else:
                 return self.stemmer.stem(_word)
         return _word
@@ -145,7 +145,17 @@ class AbstractTokenizer:
         else:
             return _word_list
 
-    # stem words
+    @staticmethod
+    def finagle(_word):
+        noun_subs = [('ches', 'ch'), ('shes', 'sh'), ('ves', 'f'), ('ses', 's'), ('xes', 'x'), ('zes', 'z'),
+                     ('men', 'man'), ('ies', 'y'), ('ss', 'ss'), ('s', '')]
+        for end_sub in noun_subs:
+            old = end_sub[0]
+            new = end_sub[1]
+            if _word[-len(old):] == old:
+                return _word[:-len(old)] + new
+        return _word
+
     def stem_words(self, _word_list):
         stemmed = []
         if _word_list and self.stemmer:
@@ -155,38 +165,26 @@ class AbstractTokenizer:
         else:
             return _word_list
 
-    def word_frequency(self, _text=None):
-        word_count = {}
+    def wf(self, _text=None, _as_percent=False):
+        word_dict = {}
         if not _text:
             _text = self.text
         words = self.clean_words(_text)
+        word_len = len(words)
         if words:
             c = Counter(words).most_common()
             for wc in c:
                 s = wc[0]
                 i = wc[1]
-                word_count[s] = i
-        return word_count
-
-    def wf(self, _text=None):
-        word_count = {}
-        if not _text:
-            _text = self.text
-        word_list = self.clean_words(_text)
-        key_list = set()
-        for word in word_list:
-            # find words that match
-            matches = get_close_matches(word, key_list, 1, 0.95)
-            if matches:
-                word = matches[0]
-            word_count[word] = word_count.get(word, 0) + 1
-            key_list.add(word)
-        return sort_dict(word_count)
+                if _as_percent:
+                    i = i / word_len
+                word_dict[s] = i
+        return word_dict
 
     def key_words(self, _text=None):
         if not _text:
             _text = self.text
-        return list(self.word_frequency(_text))
+        return list(self.wf(_text))
 
     def get_sentence_words(self, i):
         words = self.sentence_words[i]
