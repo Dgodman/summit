@@ -6,7 +6,6 @@ from nltk.stem import PorterStemmer
 from nltk.stem.snowball import SnowballStemmer
 from nltk.stem import WordNetLemmatizer
 from collections import Counter
-from difflib import get_close_matches
 from nltk.tokenize import sent_tokenize, word_tokenize
 from string import punctuation
 
@@ -165,14 +164,11 @@ class AbstractTokenizer:
         else:
             return _word_list
 
-    def wf(self, _text=None, _as_percent=False):
+    def wf(self, _as_percent=False):
         word_dict = {}
-        if not _text:
-            _text = self.text
-        words = self.clean_words(_text)
-        word_len = len(words)
-        if words:
-            c = Counter(words).most_common()
+        if self.words:
+            word_len = len(self.words)
+            c = Counter(self.words).most_common()
             for wc in c:
                 s = wc[0]
                 i = wc[1]
@@ -181,10 +177,8 @@ class AbstractTokenizer:
                 word_dict[s] = i
         return word_dict
 
-    def key_words(self, _text=None):
-        if not _text:
-            _text = self.text
-        return list(self.wf(_text))
+    def key_words(self):
+        return list(self.wf())
 
     def get_sentence_words(self, i):
         words = self.sentence_words[i]
@@ -269,17 +263,16 @@ class Summus(AbstractTokenizer):
                 sentence_ranks.append(rank)
         return sentence_ranks
 
-    def print_ranked_sentences(self, _count=-1):
+    def get_ranked_sentences(self, _percent=.6, _count=-1):
+        if not _percent or _percent <= 0 or _percent > 1:
+            _percent = 0.6
         if not _count or _count <= 0:
-            _count = int(len(self.sentences) * 0.20)
+            _count = int(round(len(self.sentences) * (1 - _percent)))
         ranked_indexes = sorted(self.rank_sentences()[:_count])
         rank_text = ""
         if len(ranked_indexes) > 0:
             for i in ranked_indexes:
                 rank_text += self.sentences[i] + " "
-            print(rank_text)
-        else:
-            print("Nothing here to print.")
         return rank_text
 
     def rank_sentences(self):
