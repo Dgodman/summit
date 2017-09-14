@@ -3,7 +3,7 @@ from newspaper import Article
 
 
 # right
-breitbart_url = 'http://feeds.feedburner.com/breitbart'
+breitbart_url = 'http://www.breitbart.com/big-government/feed/'
 nationalreview_url = 'http://www.nationalreview.com/rss.xml'
 foxnews_url = 'http://feeds.foxnews.com/foxnews/politics'
 watimes_url = 'http://www.washingtontimes.com/rss/headlines/news/politics/'
